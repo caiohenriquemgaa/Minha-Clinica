@@ -2,8 +2,18 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
-import { Calendar, Layers3, LayoutDashboard, Users2, Stethoscope, Boxes, ClipboardList, LogOut } from "lucide-react"
+import { useEffect, useState } from "react"
+import {
+  Calendar,
+  Layers3,
+  LayoutDashboard,
+  Users2,
+  Stethoscope,
+  Boxes,
+  ClipboardList,
+  LogOut,
+  ShieldCheck,
+} from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/lib/auth-client"
@@ -27,12 +37,28 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isMasterAdmin, setIsMasterAdmin] = useState(false)
   const publicRoutes = ["/", "/login", "/register"]
   const shouldHide = hide || publicRoutes.includes(pathname ?? "")
 
   if (shouldHide) {
     return null
   }
+
+  useEffect(() => {
+    const checkMaster = async () => {
+      try {
+        const res = await fetch("/api/admin/me", { credentials: "include" })
+        if (res.ok) {
+          const data = await res.json()
+          setIsMasterAdmin(Boolean(data?.isMaster))
+        }
+      } catch (err) {
+        // Silencia erros de rede para não quebrar o menu
+      }
+    }
+    checkMaster()
+  }, [])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -65,6 +91,18 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
               </Link>
             )
           })}
+          {isMasterAdmin && (
+            <Link
+              href="/admin"
+              className={cn(
+                "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
+                pathname?.startsWith("/admin") ? "bg-primary/10 text-primary" : "text-muted-foreground",
+              )}
+            >
+              <ShieldCheck className="h-4 w-4" />
+              Admin
+            </Link>
+          )}
           <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4">
             <LogOut className="h-4 w-4 mr-2" />
             Sair
