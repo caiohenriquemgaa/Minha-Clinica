@@ -41,10 +41,6 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const publicRoutes = ["/", "/login", "/register"]
   const shouldHide = hide || publicRoutes.includes(pathname ?? "")
 
-  if (shouldHide) {
-    return null
-  }
-
   useEffect(() => {
     const checkMaster = async () => {
       try {
@@ -59,6 +55,10 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
     }
     checkMaster()
   }, [])
+
+  if (shouldHide) {
+    return null
+  }
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
