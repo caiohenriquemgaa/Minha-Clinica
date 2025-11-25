@@ -33,10 +33,13 @@ export default async function AdminPage() {
   }
 
   const admin = createSupabaseAdminClient()
-  const { data: organizations = [] } = await admin
+  const { data, error } = await admin
     .from("organizations")
     .select("id, name, contact_email, contact_phone, plan_status, trial_end_at, created_at, updated_at")
     .order("created_at", { ascending: true })
+
+  const organizations = data ?? []
+  const loadError = error?.message
 
   return (
     <div className="container mx-auto py-10 space-y-6">
@@ -52,7 +55,11 @@ export default async function AdminPage() {
           <CardTitle>Clínicas ativas</CardTitle>
         </CardHeader>
         <CardContent>
-          <AdminOrganizationsPanel initialOrganizations={organizations} />
+          {loadError ? (
+            <p className="text-sm text-red-500">Não foi possível carregar as clínicas: {loadError}</p>
+          ) : (
+            <AdminOrganizationsPanel initialOrganizations={organizations} />
+          )}
         </CardContent>
       </Card>
     </div>
