@@ -42,6 +42,7 @@ export async function signUpClinic(payload: SignUpPayload) {
       },
       credentials: "include",
       body: JSON.stringify({
+        userId: data.user.id,
         clinicName: payload.clinicName,
         phone: payload.phone,
         email: payload.email,

@@ -164,9 +164,11 @@ export default function HomePage() {
                     Começar Agora
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg">
-                  Agendar Demo
-                </Button>
+                <Link href="/register">
+                  <Button variant="outline" size="lg">
+                    Teste por 7 dias grátis
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

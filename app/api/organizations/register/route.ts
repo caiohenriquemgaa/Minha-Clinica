@@ -3,21 +3,30 @@ import { createSupabaseServerClient } from "@/lib/supabase/server"
 import { createSupabaseAdminClient } from "@/lib/supabase/admin"
 
 export async function POST(request: Request) {
-  const supabase = createSupabaseServerClient()
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
-
-  if (userError || !user) {
-    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
-  }
-
   const payload = await request.json()
-  const { clinicName, phone, email, ownerName } = payload
+  const { clinicName, phone, email, ownerName, userId } = payload
 
   if (!clinicName || !phone) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
+  }
+
+  // Tentar obter o usuário pela sessão; se não existir, usar o userId enviado pelo signup
+  let ownerId = userId as string | undefined
+  let ownerEmail = email as string | undefined
+  let ownerNameResolved = ownerName as string | undefined
+
+  if (!ownerId) {
+    const supabase = createSupabaseServerClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    ownerId = user?.id
+    ownerEmail = ownerEmail ?? user?.email ?? undefined
+    ownerNameResolved = ownerNameResolved ?? (user?.user_metadata as any)?.full_name ?? ""
+  }
+
+  if (!ownerId) {
+    return NextResponse.json({ error: "Não autenticado" }, { status: 401 })
   }
 
   const adminClient = createSupabaseAdminClient()
@@ -26,7 +35,7 @@ export async function POST(request: Request) {
     .from("organizations")
     .insert({
       name: clinicName,
-      contact_email: email ?? user.email,
+      contact_email: ownerEmail ?? email,
       contact_phone: phone,
     })
     .select("id")
@@ -37,8 +46,8 @@ export async function POST(request: Request) {
   }
 
   const profilePayload = {
-    id: user.id,
-    full_name: ownerName ?? user.user_metadata?.full_name ?? "",
+    id: ownerId,
+    full_name: ownerNameResolved ?? "",
     default_organization_id: organization.id,
   }
 
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
 
   const { error: membershipError } = await adminClient.from("organization_members").upsert({
     organization_id: organization.id,
-    user_id: user.id,
+    user_id: ownerId,
     role: "owner",
     status: "active",
   })
