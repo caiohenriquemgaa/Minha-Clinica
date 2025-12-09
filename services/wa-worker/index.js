@@ -61,15 +61,17 @@ async function initSocket() {
 
 /**
  * Fetch pending reminders using lock-like mechanism to prevent duplicate processing
+ * Queries reminders from ALL organizations (service role bypasses RLS)
  * Selects reminders where status='pending' and scheduled_at <= now, within batch limit
  */
 async function fetchPendingRemindersWithLock() {
   const now = new Date().toISOString()
   
-  // Fetch pending reminders with specific columns (id, phone, message, etc)
+  // IMPORTANT: Service role bypasses RLS, so worker can fetch from ALL organizations
+  // This is intentional - worker processes reminders for all clinics
   const { data: pending, error: fetchError } = await supabase
     .from('reminders')
-    .select('id, patient_phone, patient_name, message, scheduled_at, attempts, window_type')
+    .select('id, organization_id, patient_phone, patient_name, message, scheduled_at, attempts, window_type')
     .eq('status', 'pending')
     .lte('scheduled_at', now)
     .limit(BATCH_LIMIT)
@@ -129,6 +131,7 @@ async function sendWhatsAppMessage(phone, text) {
 
 /**
  * Main worker loop: fetch reminders, send, update status with retry logic
+ * Processes reminders for ALL organizations (multi-tenant aware)
  */
 async function workerLoop() {
   if (!sock || sock.user === undefined) {
@@ -155,7 +158,12 @@ async function workerLoop() {
 
     for (const reminder of pending) {
       try {
-        log.info({ id: reminder.id, phone: reminder.patient_phone, window: reminder.window_type }, 'Sending reminder')
+        log.info({ 
+          id: reminder.id, 
+          org: reminder.organization_id,
+          phone: reminder.patient_phone, 
+          window: reminder.window_type 
+        }, 'Sending reminder')
 
         // Send message via WhatsApp
         const res = await sendWhatsAppMessage(reminder.patient_phone, reminder.message)
@@ -167,7 +175,7 @@ async function workerLoop() {
             sent_at: new Date().toISOString(),
             attempts: (reminder.attempts || 0) + 1,
           })
-          log.info({ id: reminder.id }, 'Reminder sent successfully')
+          log.info({ id: reminder.id, org: reminder.organization_id }, 'Reminder sent successfully')
         } else {
           // Retry logic: check if we should retry or fail
           const newAttempts = (reminder.attempts || 0) + 1
@@ -182,7 +190,13 @@ async function workerLoop() {
               attempts: newAttempts,
               last_error: res.error,
             })
-            log.warn({ id: reminder.id, attempt: newAttempts, nextRetry: retryAt, error: res.error }, 'Reminder send failed, scheduled for retry')
+            log.warn({ 
+              id: reminder.id, 
+              org: reminder.organization_id,
+              attempt: newAttempts, 
+              nextRetry: retryAt, 
+              error: res.error 
+            }, 'Reminder send failed, scheduled for retry')
           } else {
             // Max retries reached, mark as failed permanently
             await markReminder(reminder.id, {
@@ -190,11 +204,16 @@ async function workerLoop() {
               attempts: newAttempts,
               last_error: res.error,
             })
-            log.error({ id: reminder.id, error: res.error, attempts: newAttempts }, 'Reminder send failed after max retries')
+            log.error({ 
+              id: reminder.id, 
+              org: reminder.organization_id,
+              error: res.error, 
+              attempts: newAttempts 
+            }, 'Reminder send failed after max retries')
           }
         }
       } catch (err) {
-        log.error({ err, reminderId: reminder.id }, 'Unexpected error processing reminder')
+        log.error({ err, reminderId: reminder.id, org: reminder.organization_id }, 'Unexpected error processing reminder')
         // Reset status to pending on unexpected error (will retry)
         await markReminder(reminder.id, {
           status: 'pending',
@@ -215,6 +234,10 @@ async function workerLoop() {
 
 async function start() {
   log.info('Starting WhatsApp Reminder Worker')
+  log.info({ supabaseUrl: SUPABASE_URL }, 'Configured Supabase')
+  log.info({ pollInterval: POLL_INTERVAL_SECONDS, maxRetries: MAX_RETRIES }, 'Worker settings')
+  log.info('Service Role enabled - processing reminders for ALL organizations (multi-tenant)')
+  
   await initSocket()
   
   // Wait for socket to be ready before starting poll
