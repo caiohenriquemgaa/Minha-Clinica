@@ -32,14 +32,31 @@ export default async function AdminPage() {
     )
   }
 
-  const admin = createSupabaseAdminClient()
-  const { data, error } = await admin
-    .from("organizations")
-    .select("id, name, contact_email, contact_phone, plan_status, trial_end_at, created_at, updated_at")
-    .order("created_at", { ascending: true })
+  let organizations: any[] = []
+  let loadError: string | undefined
 
-  const organizations = data ?? []
-  const loadError = error?.message
+  try {
+    const admin = createSupabaseAdminClient()
+    const { data, error } = await admin
+      .from("organizations")
+      .select("id, name, contact_email, contact_phone, plan_status, trial_end_at, created_at, updated_at")
+      .order("created_at", { ascending: true })
+
+    organizations = data ?? []
+
+    const rawError = error?.message
+    if (rawError) {
+      // Mensagem mais amigável para erro comum de chave inválida
+      if (rawError.toLowerCase().includes("invalid api key") || rawError.toLowerCase().includes("invalid key")) {
+        loadError = "Não foi possível carregar as clínicas: chave de API inválida. Verifique a variável de ambiente SUPABASE_SERVICE_ROLE (ou SUPABASE_SERVICE_ROLE_KEY) e a URL do Supabase (NEXT_PUBLIC_SUPABASE_URL)."
+      } else {
+        loadError = rawError
+      }
+    }
+  } catch (err: any) {
+    // Erros de criação do cliente (ex.: credenciais ausentes) ou de rede
+    loadError = err?.message || String(err)
+  }
 
   return (
     <div className="container mx-auto py-10 space-y-6">
