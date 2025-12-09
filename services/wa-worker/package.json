@@ -1,0 +1,16 @@
+{
+  "name": "wa-worker",
+  "version": "0.1.0",
+  "description": "Worker for sending WhatsApp reminders using Baileys and Supabase",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@adiwajshing/baileys": "^5.0.0",
+    "@supabase/supabase-js": "^2.0.0",
+    "pino": "^8.0.0",
+    "dotenv": "^16.0.0",
+    "node-fetch": "^2.6.7"
+  }
+}
