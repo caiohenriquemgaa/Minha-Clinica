@@ -38,6 +38,7 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMasterAdmin, setIsMasterAdmin] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const publicRoutes = ["/", "/login", "/register"]
   const shouldHide = hide || publicRoutes.includes(pathname ?? "")
 
@@ -51,10 +52,17 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
         }
       } catch (err) {
         // Silencia erros de rede para não quebrar o menu
+      } finally {
+        setIsLoading(false)
       }
     }
-    checkMaster()
-  }, [])
+    
+    if (!shouldHide) {
+      checkMaster()
+    } else {
+      setIsLoading(false)
+    }
+  }, [shouldHide])
 
   if (shouldHide) {
     return null

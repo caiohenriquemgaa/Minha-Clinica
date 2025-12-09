@@ -33,8 +33,12 @@ export default function LoginPage() {
       const { error: authError } = await signIn(email, password)
       if (authError) {
         setError(authError.message || "Credenciais inválidas")
+        setIsLoading(false)
         return
       }
+
+      // Aguardar um momento para garantir que a sessão seja estabelecida
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       const membership = await getCurrentMembership()
       if (membership?.plan_status === "blocked") {
@@ -42,10 +46,15 @@ export default function LoginPage() {
         return
       }
 
-      router.push(redirectTo)
+      // Revalidar a rota para garantir que o servidor obtenha a sessão atualizada
+      router.refresh()
+      
+      // Usar um pequeno delay antes de redirecionar para permitir que a sessão se propague
+      setTimeout(() => {
+        router.push(redirectTo)
+      }, 100)
     } catch (err) {
       setError("Erro interno do servidor. Tente novamente.")
-    } finally {
       setIsLoading(false)
     }
   }
