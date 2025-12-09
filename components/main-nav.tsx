@@ -17,7 +17,6 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/lib/auth-client"
-import { useSession } from "@/components/session-provider"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,11 +36,10 @@ interface MainNavProps {
 export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { hasSession } = useSession()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMasterAdmin, setIsMasterAdmin] = useState(false)
   const publicRoutes = ["/", "/login", "/register"]
-  const shouldHide = hide || publicRoutes.includes(pathname ?? "") || !hasSession
+  const shouldHide = hide || publicRoutes.includes(pathname ?? "")
 
   useEffect(() => {
     const checkMaster = async () => {
@@ -56,10 +54,10 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
       }
     }
     
-    if (!shouldHide && hasSession) {
+    if (!shouldHide) {
       checkMaster()
     }
-  }, [shouldHide, hasSession])
+  }, [shouldHide])
 
   if (shouldHide) {
     return null

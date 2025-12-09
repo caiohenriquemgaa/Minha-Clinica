@@ -38,7 +38,7 @@ export default function LoginPage() {
       }
 
       // Aguardar um momento para garantir que a sessão seja estabelecida
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise(resolve => setTimeout(resolve, 500))
 
       const membership = await getCurrentMembership()
       if (membership?.plan_status === "blocked") {
@@ -46,9 +46,9 @@ export default function LoginPage() {
         return
       }
 
-      // Fazer um hard redirect usando window.location para garantir que o servidor recarregue
-      // e reconheça a sessão através do middleware
-      window.location.href = redirectTo
+      // Revalidar a rota e redirecionar
+      router.refresh()
+      router.push(redirectTo)
     } catch (err) {
       setError("Erro interno do servidor. Tente novamente.")
       setIsLoading(false)

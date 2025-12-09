@@ -17,25 +17,52 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const supabase = createSupabaseBrowserClient()
 
   useEffect(() => {
-    checkSession()
-    
+    let isMounted = true
+
+    const initializeSession = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        
+        if (isMounted) {
+          setHasSession(!!session)
+        }
+      } catch (error) {
+        console.error('Erro ao verificar sessão:', error)
+        if (isMounted) {
+          setHasSession(false)
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
     // Listener para mudanças de autenticação
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        setHasSession(true)
-        // Força um reload da página para garantir que o middleware processe a nova sessão
-        window.location.reload()
-      } else if (event === 'SIGNED_OUT') {
-        setHasSession(false)
+      if (isMounted) {
+        if (event === 'SIGNED_IN') {
+          setHasSession(true)
+        } else if (event === 'SIGNED_OUT') {
+          setHasSession(false)
+        }
       }
     })
 
-    return () => subscription?.unsubscribe()
-  }, [])
+    initializeSession()
 
-  const checkSession = async () => {
+    return () => {
+      isMounted = false
+      subscription?.unsubscribe()
+    }
+  }, [supabase])
+
+  const refetchSession = async () => {
+    setIsLoading(true)
     try {
       const {
         data: { session },
@@ -47,11 +74,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const refetchSession = async () => {
-    setIsLoading(true)
-    await checkSession()
   }
 
   return (
