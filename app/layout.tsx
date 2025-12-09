@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next"
 import { Suspense } from "react"
 import "./globals.css"
 import { MainNav } from "@/components/main-nav"
+import { SessionProvider } from "@/components/session-provider"
 import { getServerSession } from "@/lib/auth-server"
 
 export const metadata: Metadata = {
@@ -25,10 +26,12 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-background`}>
-        <MainNav hide={!hasSession} brand="Minha Clínica" />
-        <main className={`min-h-screen ${hasSession ? "pt-20" : ""}`}>
-          <Suspense fallback={null}>{children}</Suspense>
-        </main>
+        <SessionProvider>
+          <MainNav hide={!hasSession} brand="Minha Clínica" />
+          <main className={`min-h-screen ${hasSession ? "pt-20" : ""}`}>
+            <Suspense fallback={null}>{children}</Suspense>
+          </main>
+        </SessionProvider>
         <Analytics />
       </body>
     </html>

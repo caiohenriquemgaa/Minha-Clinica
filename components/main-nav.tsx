@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/lib/auth-client"
+import { useSession } from "@/components/session-provider"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -36,11 +37,11 @@ interface MainNavProps {
 export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const pathname = usePathname()
   const router = useRouter()
+  const { hasSession } = useSession()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMasterAdmin, setIsMasterAdmin] = useState(false)
-  const [isLoading, setIsLoading] = useState(true)
   const publicRoutes = ["/", "/login", "/register"]
-  const shouldHide = hide || publicRoutes.includes(pathname ?? "")
+  const shouldHide = hide || publicRoutes.includes(pathname ?? "") || !hasSession
 
   useEffect(() => {
     const checkMaster = async () => {
@@ -52,17 +53,13 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
         }
       } catch (err) {
         // Silencia erros de rede para não quebrar o menu
-      } finally {
-        setIsLoading(false)
       }
     }
     
-    if (!shouldHide) {
+    if (!shouldHide && hasSession) {
       checkMaster()
-    } else {
-      setIsLoading(false)
     }
-  }, [shouldHide])
+  }, [shouldHide, hasSession])
 
   if (shouldHide) {
     return null
