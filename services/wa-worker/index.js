@@ -1,6 +1,6 @@
 require('dotenv').config()
 const pino = require('pino')
-const { makeWASocket, useSingleFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@adiwajshing/baileys')
+const { makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion } = require('@adiwajshing/baileys')
 const { createClient } = require('@supabase/supabase-js')
 const fs = require('fs')
 const path = require('path')
@@ -12,6 +12,8 @@ const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
 const POLL_INTERVAL_SECONDS = parseInt(process.env.POLL_INTERVAL_SECONDS || '30', 10)
 const WA_SESSION_DIR = process.env.WA_SESSION_DIR || './wa-session'
 const BATCH_LIMIT = parseInt(process.env.BATCH_LIMIT || '20', 10)
+const MAX_RETRIES = parseInt(process.env.MAX_RETRIES || '3', 10)
+const RETRY_BACKOFF_SECONDS = parseInt(process.env.RETRY_BACKOFF_SECONDS || '60', 10)
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
   log.error('Missing Supabase config. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE in env.')
@@ -27,6 +29,7 @@ if (!fs.existsSync(WA_SESSION_DIR)) fs.mkdirSync(WA_SESSION_DIR, { recursive: tr
 const { state, saveState } = useSingleFileAuthState(authFile)
 
 let sock = null
+let isProcessing = false
 
 async function initSocket() {
   const { version } = await fetchLatestBaileysVersion()
@@ -56,36 +59,65 @@ async function initSocket() {
   })
 }
 
-async function fetchPendingReminders() {
-  // Ajuste a query abaixo conforme sua estrutura de dados
-  // Este exemplo assume existência de uma view ou tabela v_reminders com campos: id, phone, message, scheduled_at, status
-  const windowStart = new Date().toISOString()
-  // Seleciona lembretes com status 'pending' e scheduled_at <= now
-  const { data, error } = await supabase
+/**
+ * Fetch pending reminders using lock-like mechanism to prevent duplicate processing
+ * Selects reminders where status='pending' and scheduled_at <= now, within batch limit
+ */
+async function fetchPendingRemindersWithLock() {
+  const now = new Date().toISOString()
+  
+  // Fetch pending reminders with specific columns (id, phone, message, etc)
+  const { data: pending, error: fetchError } = await supabase
     .from('reminders')
-    .select('id, phone, message, scheduled_at')
+    .select('id, patient_phone, patient_name, message, scheduled_at, attempts, window_type')
     .eq('status', 'pending')
-    .lte('scheduled_at', windowStart)
+    .lte('scheduled_at', now)
     .limit(BATCH_LIMIT)
 
-  if (error) {
-    log.error({ error }, 'Error fetching reminders')
+  if (fetchError) {
+    log.error({ fetchError }, 'Error fetching reminders')
     return []
   }
-  return data || []
+
+  if (!pending || pending.length === 0) {
+    return []
+  }
+
+  // Update status to 'processing' atomically to prevent duplicate processing by parallel workers
+  const ids = pending.map(r => r.id)
+  const { error: updateError } = await supabase
+    .from('reminders')
+    .update({ status: 'processing' })
+    .in('id', ids)
+
+  if (updateError) {
+    log.error({ updateError }, 'Error locking reminders for processing')
+    return []
+  }
+
+  log.info({ count: pending.length }, 'Locked reminders for processing')
+  return pending
 }
 
+/**
+ * Mark reminder with new status and metadata
+ */
 async function markReminder(id, payload) {
   const { error } = await supabase
     .from('reminders')
     .update(payload)
     .eq('id', id)
-  if (error) log.error({ error }, 'Error updating reminder')
+  if (error) {
+    log.error({ error, id }, 'Error updating reminder status')
+  }
 }
 
+/**
+ * Send WhatsApp message via Baileys
+ */
 async function sendWhatsAppMessage(phone, text) {
-  // Baileys expects phone in format 'countrycodephonenumber@s.whatsapp.net'
-  // e.g., for Brazil: 5511999999999 -> '5511999999999@s.whatsapp.net'
+  // Baileys expects: 'countrycodephonenumber@s.whatsapp.net'
+  // e.g., Brazil: 5511999999999 -> '5511999999999@s.whatsapp.net'
   const jid = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`
   try {
     await sock.sendMessage(jid, { text })
@@ -95,50 +127,108 @@ async function sendWhatsAppMessage(phone, text) {
   }
 }
 
+/**
+ * Main worker loop: fetch reminders, send, update status with retry logic
+ */
 async function workerLoop() {
-  if (!sock) {
-    log.warn('Socket not ready yet')
+  if (!sock || sock.user === undefined) {
+    log.warn('Socket not ready yet (WhatsApp connection pending)')
     return
   }
 
-  const pending = await fetchPendingReminders()
-  if (!pending.length) {
-    log.info('No pending reminders')
+  // Prevent concurrent processing in same instance
+  if (isProcessing) {
+    log.debug('Worker already processing, skipping this cycle')
     return
   }
 
-  for (const r of pending) {
-    log.info({ id: r.id, phone: r.phone }, 'Sending reminder')
-    try {
-      // send message
-      const res = await sendWhatsAppMessage(r.phone, r.message)
-      if (res.success) {
-        await markReminder(r.id, { status: 'sent', sent_at: new Date().toISOString(), attempts: (r.attempts || 0) + 1 })
-        log.info({ id: r.id }, 'Sent')
-      } else {
-        // update attempts and error
-        await markReminder(r.id, { status: 'failed', last_error: res.error, attempts: (r.attempts || 0) + 1 })
-        log.error({ id: r.id, error: res.error }, 'Send failed')
-      }
-    } catch (err) {
-      log.error({ err }, 'Unexpected error sending reminder')
-      await markReminder(r.id, { status: 'failed', last_error: String(err) })
+  isProcessing = true
+
+  try {
+    const pending = await fetchPendingRemindersWithLock()
+    if (!pending.length) {
+      log.debug('No pending reminders')
+      return
     }
+
+    log.info({ count: pending.length }, 'Processing pending reminders')
+
+    for (const reminder of pending) {
+      try {
+        log.info({ id: reminder.id, phone: reminder.patient_phone, window: reminder.window_type }, 'Sending reminder')
+
+        // Send message via WhatsApp
+        const res = await sendWhatsAppMessage(reminder.patient_phone, reminder.message)
+
+        if (res.success) {
+          // Successfully sent
+          await markReminder(reminder.id, {
+            status: 'sent',
+            sent_at: new Date().toISOString(),
+            attempts: (reminder.attempts || 0) + 1,
+          })
+          log.info({ id: reminder.id }, 'Reminder sent successfully')
+        } else {
+          // Retry logic: check if we should retry or fail
+          const newAttempts = (reminder.attempts || 0) + 1
+          const shouldRetry = newAttempts < MAX_RETRIES
+
+          if (shouldRetry) {
+            // Reschedule for retry: set status back to pending with delay
+            const retryAt = new Date(Date.now() + RETRY_BACKOFF_SECONDS * 1000).toISOString()
+            await markReminder(reminder.id, {
+              status: 'pending',
+              scheduled_at: retryAt,
+              attempts: newAttempts,
+              last_error: res.error,
+            })
+            log.warn({ id: reminder.id, attempt: newAttempts, nextRetry: retryAt, error: res.error }, 'Reminder send failed, scheduled for retry')
+          } else {
+            // Max retries reached, mark as failed permanently
+            await markReminder(reminder.id, {
+              status: 'failed',
+              attempts: newAttempts,
+              last_error: res.error,
+            })
+            log.error({ id: reminder.id, error: res.error, attempts: newAttempts }, 'Reminder send failed after max retries')
+          }
+        }
+      } catch (err) {
+        log.error({ err, reminderId: reminder.id }, 'Unexpected error processing reminder')
+        // Reset status to pending on unexpected error (will retry)
+        await markReminder(reminder.id, {
+          status: 'pending',
+          attempts: (reminder.attempts || 0) + 1,
+          last_error: String(err),
+        })
+      }
+
+      // Rate limiting: small delay between messages to avoid WhatsApp throttling/blocking
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  } catch (err) {
+    log.error({ err }, 'Unexpected error in worker loop')
+  } finally {
+    isProcessing = false
   }
 }
 
 async function start() {
+  log.info('Starting WhatsApp Reminder Worker')
   await initSocket()
-  // Wait a bit to ensure socket ready
+  
+  // Wait for socket to be ready before starting poll
   setTimeout(() => {
-    workerLoop().catch(err => log.error(err))
+    log.info({ pollInterval: POLL_INTERVAL_SECONDS }, 'Starting reminder poll loop')
+    workerLoop().catch(err => log.error(err, 'Error in initial worker loop'))
+    
     setInterval(() => {
-      workerLoop().catch(err => log.error(err))
+      workerLoop().catch(err => log.error(err, 'Error in worker loop interval'))
     }, POLL_INTERVAL_SECONDS * 1000)
   }, 5000)
 }
 
 start().catch(err => {
-  log.error(err)
+  log.error(err, 'Fatal error starting worker')
   process.exit(1)
 })
