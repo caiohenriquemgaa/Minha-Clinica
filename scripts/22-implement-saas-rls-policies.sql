@@ -176,4 +176,7 @@ CREATE POLICY "reminders_delete_own_org" ON reminders
 -- 4. Login como usuário da Clínica B
 -- 5. SELECT * FROM patients; -- Só vê pacientes da Clínica B
 
-RAISE NOTICE 'RLS policies implementadas com sucesso! Cada clínica só acessa dados dela própria.';
+DO $$
+BEGIN
+  RAISE NOTICE 'RLS policies implementadas com sucesso! Cada clinica so acessa dados dela propria.';
+END $$;
