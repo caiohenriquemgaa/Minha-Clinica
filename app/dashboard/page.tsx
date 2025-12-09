@@ -514,9 +514,6 @@ export default function DashboardPage() {
                 Assim que a profissional acessa, ela visualiza toda a programação do dia, confirmações pendentes e o
                 status dos lembretes automáticos enviados via WhatsApp.
               </p>
-              <Badge variant="outline" className="mt-3 text-[10px] font-semibold uppercase tracking-wider">
-                Fonte de dados: {dataSourceLabel[dataSourceMode]}
-              </Badge>
             </div>
             <div className="flex flex-wrap gap-2">
               <Link href="/calendar/new">
