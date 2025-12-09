@@ -13,8 +13,8 @@ BEGIN
   
   -- Se não há nenhum paciente, criar um
   IF patient_count = 0 THEN
-    INSERT INTO patients (name, phone, email, date_of_birth)
-    VALUES ('Paciente Teste', '5511999999999', 'teste@email.com', NOW() - INTERVAL '30 years')
+    INSERT INTO patients (name, phone, email, birth_date)
+    VALUES ('Paciente Teste', '5511999999999', 'teste@email.com', NOW()::date - INTERVAL '30 years')
     RETURNING id INTO test_patient_id;
     RAISE NOTICE 'Paciente criado: %', test_patient_id;
   ELSE
