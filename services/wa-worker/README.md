@@ -16,7 +16,10 @@ Variáveis de ambiente (use `.env` ou configurar no container)
 - `SUPABASE_SERVICE_ROLE` - Service Role Key (server-only)
 - `POLL_INTERVAL_SECONDS` - intervalo de polling (default 30)
 - `WA_SESSION_DIR` - diretório onde a sessão do WhatsApp será persistida (default `./wa-session`)
-- `BATCH_LIMIT` - número máximo de mensagens por execução
+- `BATCH_LIMIT` - número máximo de mensagens por execução (default 20)
+- `MAX_RETRIES` - tentativas máximas de reenvio (default 3)
+- `RETRY_BACKOFF_SECONDS` - delay de espera para retry (default 60s)
+- `LOG_LEVEL` - nível de log (default 'info')
 
 Como rodar localmente
 
@@ -48,23 +51,28 @@ Observações importantes
 - Para produção escalável e cumprimento das políticas, prefira um provedor oficial do WhatsApp Business (Twilio, 360dialog, MessageBird).
 - Certifique-se de que os pacientes consentiram em receber mensagens via WhatsApp.
 
-Estrutura da tabela `reminders` (exemplo)
+Estrutura da tabela `reminders` (esperada)
 
-A query do worker espera uma tabela `reminders` com, pelo menos, os seguintes campos:
-- `id` (uuid ou int)
-- `phone` (string) - número no formato internacional (ex: 5511999999999)
-- `message` (string) - texto a ser enviado
-- `scheduled_at` (timestamp)
-- `status` (string) - 'pending' | 'sent' | 'failed'
-- `attempts` (int)
-- `sent_at` (timestamp)
-- `last_error` (text)
+A query do worker espera uma tabela `reminders` com os seguintes campos:
+- `id` (uuid) - identificador único
+- `patient_phone` (string) - número no formato internacional (ex: 5511999999999)
+- `patient_name` (string) - nome do paciente
+- `message` (string) - texto da mensagem
+- `scheduled_at` (timestamp) - quando enviar
+- `status` (string) - 'pending' | 'processing' | 'sent' | 'failed'
+- `attempts` (int) - número de tentativas
+- `sent_at` (timestamp) - quando foi enviado com sucesso
+- `last_error` (text) - mensagem de erro se falhar
+- `window_type` (string) - '24h' ou '2h' (tipo de janela de lembrete)
+
+Mecanismo de Locking e Retry
+
+- **Locking atômico**: Quando um batch de reminders é processado, o status muda de 'pending' → 'processing' em uma transação, prevenindo que múltiplas instâncias do worker processem o mesmo reminder.
+- **Retry automático**: Se o envio falhar e `attempts < MAX_RETRIES`, o reminder retorna a 'pending' com `scheduled_at` adiado por `RETRY_BACKOFF_SECONDS`. Se atingir `MAX_RETRIES`, é marcado como 'failed'.
+- **Rate limiting**: Delay de 500ms entre envios sucessivos para evitar throttling do WhatsApp.
+- **Concorrência**: Flag `isProcessing` impede processamento paralelo na mesma instância do worker.
 
 Adaptações
 
-- Se sua tabela de consultas for diferente, ajuste a função `fetchPendingReminders()` em `index.js` para construir os lembretes desejados.
-- Para melhor resiliência, adicione locking/transaction para evitar duplicatas ao enviar em múltiplas instâncias.
-
-Quer que eu:
-- A) implemente a integração deste worker com a estrutura atual do banco (faço a query correta), ou
-- B) apenas forneça este worker e instruções para você adaptar a sua tabela?
+- A tabela `reminders` é alimentada automaticamente por um trigger do banco quando uma sessão (appointment) é criada. Veja `scripts/17-improve-reminders-multi-window.sql`.
+- Se sua estrutura for diferente, ajuste `fetchPendingRemindersWithLock()` em `index.js` para adequar as colunas.
