@@ -43,7 +43,8 @@ export default function LoginPage() {
         return
       }
 
-      router.push(redirectTo)
+      // Hard redirect to ensure server (middleware) sees the new session cookie
+      window.location.assign(redirectTo)
     } catch (err) {
       setError("Erro interno do servidor. Tente novamente.")
       setIsLoading(false)

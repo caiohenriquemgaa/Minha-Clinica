@@ -67,7 +67,8 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true)
     await signOut()
-    router.push("/login")
+    // Hard redirect after sign out so the server/middleware state is fresh
+    window.location.assign('/login')
   }
 
   return (
