@@ -1,15 +1,45 @@
-# 📋 Guia Completo: Setup Reminders com WhatsApp Worker
+# 📋 Guia Completo: Setup Reminders com WhatsApp Worker (SaaS Multi-Tenant)
 
 ## 🎯 Objetivo
 Configurar o sistema automático de lembretes via WhatsApp que:
-1. Monitora a tabela `reminders` no Supabase
-2. Envia 2 mensagens por agendamento (24h e 2h antes)
-3. Trata falhas com retry automático
-4. Previne duplicatas com locking atômico
+1. **Isolado por Clínica**: Cada clínica só acessa seus próprios dados (RLS)
+2. **Monitora** a tabela `reminders` no Supabase
+3. **Envia 2 mensagens** por agendamento (24h e 2h antes)
+4. **Trata falhas** com retry automático
+5. **Previne duplicatas** com locking atômico
+6. **Multi-Tenant**: Worker processa lembretes para TODAS as clínicas
 
 ---
 
-## ✅ PASSO 1: Executar SQL (Supabase)
+## 🔐 Arquitetura SaaS (Isolamento Garantido)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│ Clínica A (Organization A)                                  │
+│  ├─ Usuário A1 ──────┐                                      │
+│  ├─ Usuário A2 ──────┼─→ RLS Filter: org_id = A             │
+│  ├─ Pacientes (org A) │   • SELECT * FROM patients ──→ só A │
+│  ├─ Sessões (org A)   │   • UPDATE patients ──→ só org A    │
+│  └─ Reminders (org A) │                                      │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│ Clínica B (Organization B)                                  │
+│  ├─ Usuário B1 ──────┐                                      │
+│  ├─ Pacientes (org B) ├─→ RLS Filter: org_id = B            │
+│  ├─ Sessões (org B)   │   • SELECT * FROM patients ──→ só B │
+│  └─ Reminders (org B) │                                      │
+└─────────────────────────────────────────────────────────────┘
+
+Worker (Service Role - Bypass RLS)
+  ├─→ Fetch reminders from ORG A + ORG B + ORG C...
+  ├─→ Process all pending reminders
+  └─→ Send via WhatsApp
+```
+
+---
+
+## ✅ PASSO 1: Executar Migrações SQL (Supabase)
 
 ### 1.1 - Limpar conflitos (execute PRIMEIRO se tiver erros)
 Abra **Supabase → SQL Editor** e execute:
@@ -22,28 +52,54 @@ ALTER TABLE reminders DROP CONSTRAINT IF EXISTS unique_session_window;
 ALTER TABLE reminders DROP COLUMN IF EXISTS window_type;
 ```
 
-### 1.2 - Executar script 16 (tabela base)
+### 1.2 - Script 16: Criar tabela reminders base
 Copie **todo** o conteúdo de `scripts/16-create-reminders-table.sql` e execute
 
-### 1.3 - Executar script 18 (correção)
+### 1.3 - Script 18: Corrigir schema e triggers
 Copie **todo** o conteúdo de `scripts/18-fix-reminders-schema.sql` e execute
 
-### 1.4 - Executar script 20 (teste com paciente)
-Copie **todo** o conteúdo de `scripts/20-setup-test-reminders-with-phone.sql` e execute
+### 1.4 - Script 21: Suporte Multi-Organization
+Copie **todo** o conteúdo de `scripts/21-fix-reminders-multi-org.sql` e execute
 
-**Resultado esperado:**
-```
-✅ Paciente criado/atualizado com telefone
-✅ Procedimento criado/encontrado
-✅ Sessão de teste criada
-✅ 2 reminders geradas automaticamente (window_type='24h' e '2h')
-```
+### 1.5 - Script 22: Implementar RLS (CRÍTICO!)
+Copie **todo** o conteúdo de `scripts/22-implement-saas-rls-policies.sql` e execute
+
+**Este script ativa Row Level Security que garante isolamento entre clínicas!**
+
+### 1.6 - Script 20: Criar dados de teste
+Copie **todo** o conteúdo de `scripts/20-setup-test-reminders-with-phone.sql` e execute
 
 ---
 
-## ✅ PASSO 2: Testar Worker Localmente
+## ✅ PASSO 2: Testar Isolamento de Dados (SaaS)
 
-Após SQL estar OK:
+Após SQL estar OK, verifique que RLS está funcionando:
+
+```sql
+-- Como usuário AUTENTICADO da Clínica A:
+SELECT organization_id, name, phone FROM patients;
+-- Resultado: Apenas pacientes com organization_id = Clínica A
+
+-- Tente inserir paciente com org_id de outra clínica:
+INSERT INTO patients (organization_id, name, phone)
+VALUES ('org-b-uuid', 'Teste', '551199999999');
+-- ERRO: RLS bloqueará porque organization_id ≠ sua clínica!
+
+-- Como usuário da Clínica B, verá DIFERENTES dados:
+SELECT organization_id, name, phone FROM patients;
+-- Resultado: Apenas pacientes com organization_id = Clínica B
+```
+
+✅ **Se RLS está funcionando, você verá:**
+- Clínica A vê SÓ seus pacientes/procedimentos/sessões
+- Clínica B vê SÓ seus pacientes/procedimentos/sessões
+- Tentativas de acessar dados de outra clínica são **bloqueadas no DB**
+
+---
+
+## ✅ PASSO 3: Testar Worker Localmente
+
+O worker usa **Service Role** que **bypassa RLS** (por design - precisa acessar reminders de todas as clínicas).
 
 ```bash
 cd services/wa-worker
@@ -90,6 +146,42 @@ docker run -d \
 # Ver logs
 docker logs -f wa-worker
 ```
+
+---
+
+## 🔐 Segurança Multi-Tenant (CRÍTICO!)
+
+### Como RLS Protege Seus Dados
+
+**Script 22 ativa Row Level Security com:**
+
+```sql
+-- Função helper que busca a organização do usuário autenticado
+CREATE OR REPLACE FUNCTION get_user_organization_id()
+RETURNS uuid AS $$
+  SELECT default_organization_id FROM profiles WHERE id = auth.uid();
+$$ LANGUAGE sql STABLE;
+
+-- Política de SELECT: usuário só vê dados da sua organização
+CREATE POLICY "patients_select_own_org" ON patients
+  FOR SELECT TO authenticated
+  USING (organization_id = get_user_organization_id());
+```
+
+**Resultado:**
+- ✅ User A da Clínica 1 não consegue ver dados da Clínica 2
+- ✅ Queries SQL são **bloqueadas no banco de dados**
+- ✅ Não depende de código da aplicação (segurança em camada)
+- ✅ Service Role (worker) pode acessar tudo (intencional)
+
+### O que é Service Role?
+
+O worker usa `SUPABASE_SERVICE_ROLE` que:
+- ✅ **Bypassa RLS** - pode acessar ALL organizations
+- ✅ É necessário para processar reminders de todas as clínicas
+- ✅ Deve ficar **apenas em variáveis de ambiente** do servidor
+- ❌ NUNCA deve ser exposto no cliente (navegador)
+- ❌ NUNCA deve estar em código público
 
 ---
 
