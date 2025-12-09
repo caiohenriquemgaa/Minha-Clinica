@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: "Sistema completo de gestão para a sua clínica",
   generator: "v0.app",
 }
+export const revalidate = 3600
 
 export default async function RootLayout({
   children,
