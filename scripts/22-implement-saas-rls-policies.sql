@@ -42,18 +42,21 @@ DROP POLICY IF EXISTS "Allow all operations for authenticated users" ON patients
 DROP POLICY IF EXISTS "patients_policy" ON patients;
 
 -- SELECT: Usuário só vê pacientes da sua organização
+DROP POLICY IF EXISTS "patients_select_own_org" ON patients;
 CREATE POLICY "patients_select_own_org" ON patients
   FOR SELECT
   TO authenticated
   USING (organization_id = get_user_organization_id());
 
 -- INSERT: Usuário insere pacientes na sua organização
+DROP POLICY IF EXISTS "patients_insert_own_org" ON patients;
 CREATE POLICY "patients_insert_own_org" ON patients
   FOR INSERT
   TO authenticated
   WITH CHECK (organization_id = get_user_organization_id());
 
 -- UPDATE: Usuário atualiza pacientes da sua organização
+DROP POLICY IF EXISTS "patients_update_own_org" ON patients;
 CREATE POLICY "patients_update_own_org" ON patients
   FOR UPDATE
   TO authenticated
@@ -61,6 +64,7 @@ CREATE POLICY "patients_update_own_org" ON patients
   WITH CHECK (organization_id = get_user_organization_id());
 
 -- DELETE: Usuário deleta pacientes da sua organização
+DROP POLICY IF EXISTS "patients_delete_own_org" ON patients;
 CREATE POLICY "patients_delete_own_org" ON patients
   FOR DELETE
   TO authenticated
@@ -76,22 +80,26 @@ DROP POLICY IF EXISTS "Allow all for development" ON procedures;
 DROP POLICY IF EXISTS "Allow all operations for authenticated users" ON procedures;
 DROP POLICY IF EXISTS "procedures_policy" ON procedures;
 
+DROP POLICY IF EXISTS "procedures_select_own_org" ON procedures;
 CREATE POLICY "procedures_select_own_org" ON procedures
   FOR SELECT
   TO authenticated
   USING (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "procedures_insert_own_org" ON procedures;
 CREATE POLICY "procedures_insert_own_org" ON procedures
   FOR INSERT
   TO authenticated
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "procedures_update_own_org" ON procedures;
 CREATE POLICY "procedures_update_own_org" ON procedures
   FOR UPDATE
   TO authenticated
   USING (organization_id = get_user_organization_id())
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "procedures_delete_own_org" ON procedures;
 CREATE POLICY "procedures_delete_own_org" ON procedures
   FOR DELETE
   TO authenticated
@@ -107,22 +115,26 @@ DROP POLICY IF EXISTS "Allow all for development" ON sessions;
 DROP POLICY IF EXISTS "Allow all operations for authenticated users" ON sessions;
 DROP POLICY IF EXISTS "sessions_policy" ON sessions;
 
+DROP POLICY IF EXISTS "sessions_select_own_org" ON sessions;
 CREATE POLICY "sessions_select_own_org" ON sessions
   FOR SELECT
   TO authenticated
   USING (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "sessions_insert_own_org" ON sessions;
 CREATE POLICY "sessions_insert_own_org" ON sessions
   FOR INSERT
   TO authenticated
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "sessions_update_own_org" ON sessions;
 CREATE POLICY "sessions_update_own_org" ON sessions
   FOR UPDATE
   TO authenticated
   USING (organization_id = get_user_organization_id())
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "sessions_delete_own_org" ON sessions;
 CREATE POLICY "sessions_delete_own_org" ON sessions
   FOR DELETE
   TO authenticated
@@ -137,22 +149,26 @@ ALTER TABLE reminders ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Allow all for development" ON reminders;
 DROP POLICY IF EXISTS "Allow all operations for authenticated users" ON reminders;
 
+DROP POLICY IF EXISTS "reminders_select_own_org" ON reminders;
 CREATE POLICY "reminders_select_own_org" ON reminders
   FOR SELECT
   TO authenticated
   USING (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "reminders_insert_own_org" ON reminders;
 CREATE POLICY "reminders_insert_own_org" ON reminders
   FOR INSERT
   TO authenticated
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "reminders_update_own_org" ON reminders;
 CREATE POLICY "reminders_update_own_org" ON reminders
   FOR UPDATE
   TO authenticated
   USING (organization_id = get_user_organization_id())
   WITH CHECK (organization_id = get_user_organization_id());
 
+DROP POLICY IF EXISTS "reminders_delete_own_org" ON reminders;
 CREATE POLICY "reminders_delete_own_org" ON reminders
   FOR DELETE
   TO authenticated
