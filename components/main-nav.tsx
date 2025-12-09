@@ -13,6 +13,7 @@ import {
   ClipboardList,
   LogOut,
   ShieldCheck,
+  Settings,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -108,6 +109,16 @@ export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
               Admin
             </Link>
           )}
+          <Link
+            href="/settings/whatsapp"
+            className={cn(
+              "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
+              pathname?.startsWith("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Configurações
+          </Link>
           <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4">
             <LogOut className="h-4 w-4 mr-2" />
             Sair
