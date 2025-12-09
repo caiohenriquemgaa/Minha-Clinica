@@ -72,7 +72,7 @@ BEGIN
   END IF;
 
   -- Buscar dados do paciente
-  SELECT phone, name INTO phone, patient_name FROM patients WHERE id = NEW.patient_id LIMIT 1;
+  SELECT p.phone, p.name INTO phone, patient_name FROM patients p WHERE p.id = NEW.patient_id LIMIT 1;
   IF phone IS NULL OR phone = '' THEN
     RETURN NEW;
   END IF;
@@ -81,7 +81,7 @@ BEGIN
 
   -- Buscar nome do procedimento a partir de procedure_id
   IF NEW.procedure_id IS NOT NULL THEN
-    SELECT name INTO proc_name FROM procedures WHERE id = NEW.procedure_id LIMIT 1;
+    SELECT pr.name INTO proc_name FROM procedures pr WHERE pr.id = NEW.procedure_id LIMIT 1;
   END IF;
 
   -- Formatar hora (em UTC ou timezone local, ajuste conforme necessário)
