@@ -4,10 +4,16 @@
 -- Step 1: Adicionar organization_id a reminders se não existir
 ALTER TABLE reminders ADD COLUMN IF NOT EXISTS organization_id uuid;
 
--- Step 2: Adicionar constraint de organization
-ALTER TABLE reminders 
-  ADD CONSTRAINT fk_reminders_organization 
-  FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+-- Step 2: Adicionar constraint de organization (verificar se não existe)
+DO $$
+BEGIN
+  ALTER TABLE reminders 
+    ADD CONSTRAINT fk_reminders_organization 
+    FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN
+  -- Constraint já existe, ignorar
+  NULL;
+END $$;
 
 -- Step 3: Atualizar trigger para incluir organization_id
 CREATE OR REPLACE FUNCTION create_reminders_multi_window() RETURNS trigger LANGUAGE plpgsql AS $$
