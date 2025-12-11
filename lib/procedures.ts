@@ -166,10 +166,15 @@ export function getProcedureStats(procedures: Procedure[]) {
   const inactive = total - active
   const avgPrice = procedures.reduce((sum, procedure) => sum + procedure.price, 0) / (procedures.length || 1)
 
+  const avgDuration = Math.round(
+    procedures.reduce((sum, procedure) => sum + (procedure.durationMinutes || 0), 0) / (procedures.length || 1),
+  )
+
   return {
     total,
     active,
     inactive,
     avgPrice,
+    avgDuration,
   }
 }

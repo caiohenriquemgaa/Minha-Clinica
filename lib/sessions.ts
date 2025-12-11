@@ -188,14 +188,15 @@ async function fetchSupabaseSessionSingle(filter: (query: any) => any): Promise<
   const supabase = getSupabaseBrowserClient()
   let query: any = supabase.from("sessions").select(SUPABASE_SESSION_SELECT)
   query = filter(query)
-  const { data, error } = await query.maybeSingle<SupabaseSessionRow>()
+  const { data, error } = await query.maybeSingle()
+  const typedData = data as SupabaseSessionRow | null
   if (error && error.code !== "PGRST116") {
     throw new Error(`Erro ao buscar sessão: ${error.message}`)
   }
   if (!data) {
     return null
   }
-  return mapSupabaseSession(data)
+  return mapSupabaseSession(typedData as SupabaseSessionRow)
 }
 const today = new Date()
 
@@ -299,7 +300,7 @@ export async function createSession(data: SessionFormData): Promise<Session> {
       throw new Error(`Erro ao criar sessão: ${error.message}`)
     }
 
-    return mapSupabaseSession(inserted as SupabaseSessionRow)
+    return mapSupabaseSession((inserted as unknown) as SupabaseSessionRow)
   }
 
   await new Promise((resolve) => setTimeout(resolve, 300))
@@ -361,7 +362,7 @@ export async function updateSession(id: string, data: Partial<Session>): Promise
       throw new Error(`Erro ao atualizar sessão: ${error.message}`)
     }
 
-    return mapSupabaseSession(updated as SupabaseSessionRow)
+    return mapSupabaseSession((updated as unknown) as SupabaseSessionRow)
   }
 
   await new Promise((resolve) => setTimeout(resolve, 300))

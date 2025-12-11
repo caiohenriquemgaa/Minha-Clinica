@@ -59,7 +59,7 @@ export default function CalendarSettingsPage() {
     setIsSyncing(true)
     try {
       // Mock sessions data - in real app, fetch from database
-      const sessions = []
+      const sessions: any[] = []
       const result = await syncAllSessions(sessions, settings)
 
       toast({
