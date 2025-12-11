@@ -143,6 +143,7 @@ function MobileMenu({ pathname, isMasterAdmin, isLoggingOut, onLogout }: { pathn
     <div className="relative">
       <button
         aria-label="Abrir menu"
+        aria-expanded={open}
         className="p-2 rounded-md hover:bg-muted"
         onClick={() => setOpen(!open)}
       >
@@ -150,8 +151,10 @@ function MobileMenu({ pathname, isMasterAdmin, isLoggingOut, onLogout }: { pathn
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] left-4 z-50 rounded-lg bg-card p-4 shadow-md">
-          <nav className="flex flex-col gap-2">
+        <>
+          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
+          <div className="fixed inset-x-4 top-16 z-50 rounded-lg bg-card p-4 shadow-md">
+            <nav className="flex flex-col gap-2">
             {navItems.map((item) => {
               const Icon = item.icon
               const active = pathname.startsWith(item.href)
@@ -184,8 +187,9 @@ function MobileMenu({ pathname, isMasterAdmin, isLoggingOut, onLogout }: { pathn
             <button onClick={onLogout} className="flex items-center gap-2 px-3 py-2 rounded text-left text-muted-foreground">
               <LogOut className="h-5 w-5" /> Sair
             </button>
-          </nav>
-        </div>
+            </nav>
+          </div>
+        </>
       )}
     </div>
   )
