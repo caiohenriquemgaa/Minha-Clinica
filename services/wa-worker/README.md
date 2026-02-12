@@ -7,13 +7,13 @@ Este worker consulta a tabela `reminders` no Supabase e envia mensagens via What
 Pré-requisitos
 
 - Node.js 18+
-- Conta Supabase com `SUPABASE_SERVICE_ROLE` configurada
+- Conta Supabase com `SUPABASE_SERVICE_ROLE_KEY` configurada
 - Ambiente onde o worker rodará (VPS/Droplet/Server) com acesso a terminal para escanear QR pelo primeiro run
 
 Variáveis de ambiente (use `.env` ou configurar no container)
 
 - `SUPABASE_URL` - URL do projeto Supabase
-- `SUPABASE_SERVICE_ROLE` - Service Role Key (server-only)
+- `SUPABASE_SERVICE_ROLE_KEY` - Service Role Key (server-only)
 - `POLL_INTERVAL_SECONDS` - intervalo de polling (default 30)
 - `WA_SESSION_DIR` - diretório onde a sessão do WhatsApp será persistida (default `./wa-session`)
 - `BATCH_LIMIT` - número máximo de mensagens por execução (default 20)

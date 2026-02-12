@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 
-// Fallback para SUPABASE_SERVICE_ROLE_KEY (ex.: env da Vercel)
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+// Padrão: SUPABASE_SERVICE_ROLE_KEY. Fallback temporário para variável legada.
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_SERVICE_ROLE
 
 export function createSupabaseAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL

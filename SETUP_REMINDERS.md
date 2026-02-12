@@ -107,7 +107,7 @@ npm install
 cp .env.example .env
 # Editar .env com suas credenciais:
 # SUPABASE_URL=https://...
-# SUPABASE_SERVICE_ROLE=ey...
+# SUPABASE_SERVICE_ROLE_KEY=ey...
 npm start
 ```
 
@@ -176,7 +176,7 @@ CREATE POLICY "patients_select_own_org" ON patients
 
 ### O que é Service Role?
 
-O worker usa `SUPABASE_SERVICE_ROLE` que:
+O worker usa `SUPABASE_SERVICE_ROLE_KEY` que:
 - ✅ **Bypassa RLS** - pode acessar ALL organizations
 - ✅ É necessário para processar reminders de todas as clínicas
 - ✅ Deve ficar **apenas em variáveis de ambiente** do servidor

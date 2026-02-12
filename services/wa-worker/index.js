@@ -8,19 +8,19 @@ const path = require('path')
 const log = pino({ level: process.env.LOG_LEVEL || 'info' })
 
 const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE
 const POLL_INTERVAL_SECONDS = parseInt(process.env.POLL_INTERVAL_SECONDS || '30', 10)
 const WA_SESSION_DIR = process.env.WA_SESSION_DIR || './wa-session'
 const BATCH_LIMIT = parseInt(process.env.BATCH_LIMIT || '20', 10)
 const MAX_RETRIES = parseInt(process.env.MAX_RETRIES || '3', 10)
 const RETRY_BACKOFF_SECONDS = parseInt(process.env.RETRY_BACKOFF_SECONDS || '60', 10)
 
-if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE) {
-  log.error('Missing Supabase config. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE in env.')
+if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  log.error('Missing Supabase config. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in env.')
   process.exit(1)
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE)
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 // Use single-file auth state to persist session
 const authFile = path.join(WA_SESSION_DIR, 'auth_info.json')

@@ -48,7 +48,7 @@ export default async function AdminPage() {
     if (rawError) {
       // Mensagem mais amigável para erro comum de chave inválida
       if (rawError.toLowerCase().includes("invalid api key") || rawError.toLowerCase().includes("invalid key")) {
-        loadError = "Não foi possível carregar as clínicas: chave de API inválida. Verifique a variável de ambiente SUPABASE_SERVICE_ROLE (ou SUPABASE_SERVICE_ROLE_KEY) e a URL do Supabase (NEXT_PUBLIC_SUPABASE_URL)."
+        loadError = "Não foi possível carregar as clínicas: chave de API inválida. Verifique a variável de ambiente SUPABASE_SERVICE_ROLE_KEY (ou fallback SUPABASE_SERVICE_ROLE) e a URL do Supabase (NEXT_PUBLIC_SUPABASE_URL)."
       } else {
         loadError = rawError
       }
