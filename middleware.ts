@@ -16,19 +16,38 @@ const protectedRoutes = [
   "/admin",
 ]
 
-const publicRoutes = ["/", "/login", "/register", "/trial-expired"]
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => setTimeout(() => reject(new Error("middleware_timeout")), timeoutMs)),
+  ])
+}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
   const response = NextResponse.next()
-  const supabase = createSupabaseMiddlewareClient(request, response)
 
   const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
   const isAdminRoute = pathname.startsWith("/admin")
+  const isAuthRoute = pathname === "/login" || pathname === "/register"
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  // Evita chamadas ao Supabase em rotas públicas que não precisam de sessão.
+  if (!isProtectedRoute && !isAuthRoute) {
+    return response
+  }
+
+  const supabase = createSupabaseMiddlewareClient(request, response)
+
+  let session: any = null
+  try {
+    const sessionResponse = await withTimeout(supabase.auth.getSession(), 2500)
+    session = sessionResponse.data.session
+  } catch {
+    // Se a consulta de sessão falhar/timeout, não bloqueia rotas públicas.
+    if (!isProtectedRoute) {
+      return response
+    }
+  }
 
   if (isProtectedRoute && !session) {
     const loginUrl = new URL("/login", request.url)
@@ -36,7 +55,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if ((pathname === "/login" || pathname === "/register") && session) {
+  if (isAuthRoute && session) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
 
@@ -44,19 +63,6 @@ export async function middleware(request: NextRequest) {
     const isMaster = isMasterAdmin(session.user.email)
     if (!isMaster) {
       return NextResponse.redirect(new URL("/dashboard", request.url))
-    }
-  }
-
-  if (session) {
-    const { data: membership } = await supabase
-      .from("v_user_memberships")
-      .select("plan_status")
-      .eq("user_id", session.user.id)
-      .eq("status", "active")
-      .maybeSingle()
-
-    if (membership?.plan_status === "blocked" && !pathname.startsWith("/trial-expired")) {
-      return NextResponse.redirect(new URL("/trial-expired", request.url))
     }
   }
 
