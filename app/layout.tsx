@@ -25,9 +25,9 @@ export default async function RootLayout({
 
   return (
     <html lang="pt-BR">
-      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-background`}>
+      <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-background overflow-x-hidden`}>
         <MainNav hide={!hasSession} brand="EstetiTech" />
-        <main className={`min-h-screen ${hasSession ? "pt-20" : ""}`}>
+        <main className={`min-h-screen overflow-x-hidden ${hasSession ? "pt-16 md:pt-20" : ""}`}>
           <Suspense fallback={null}>{children}</Suspense>
         </main>
         <Analytics />

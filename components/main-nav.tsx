@@ -15,11 +15,13 @@ import {
   ShieldCheck,
   Settings,
   Menu,
+  ArrowLeft,
 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { signOut } from "@/lib/auth-client"
-import { useTransition } from "react"
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -41,6 +43,7 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isMasterAdmin, setIsMasterAdmin] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
   const publicRoutes = ["/", "/login", "/register"]
   const shouldHide = hide || publicRoutes.includes(pathname ?? "")
 
@@ -52,11 +55,11 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
           const data = await res.json()
           setIsMasterAdmin(Boolean(data?.isMaster))
         }
-      } catch (err) {
-        // Silencia erros de rede para não quebrar o menu
+      } catch {
+        // Ignore network errors to avoid breaking menu rendering.
       }
     }
-    
+
     if (!shouldHide) {
       checkMaster()
     }
@@ -66,131 +69,170 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
     return null
   }
 
+  const mobileTitle = getMobileTitle(pathname ?? "", brand)
+  const hasBackButton = shouldShowBack(pathname ?? "")
+
   const handleLogout = async () => {
     setIsLoggingOut(true)
     await signOut()
-    // Hard redirect after sign out so the server/middleware state is fresh
-    window.location.assign('/login')
+    // Hard redirect after sign out so server/middleware state is fresh.
+    window.location.assign("/login")
   }
 
   return (
-    <nav className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-      <div className="container mx-auto flex items-center justify-between px-4 py-3">
-        <Link href="/dashboard" className="flex flex-col">
-          <span className="text-sm font-semibold text-primary">{brand}</span>
-          <span className="text-xs text-muted-foreground">Central da clínica</span>
-        </Link>
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-4 text-sm">
-          {navItems.map((item) => {
-            const Icon = item.icon
-            const active = pathname?.startsWith(item.href)
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
-                  active ? "bg-primary/10 text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </Link>
-            )
-          })}
-          {isMasterAdmin && (
-            <Link
-              href="/admin"
-              className={cn(
-                "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
-                pathname?.startsWith("/admin") ? "bg-primary/10 text-primary" : "text-muted-foreground",
-              )}
-            >
-              <ShieldCheck className="h-4 w-4" />
-              Admin
-            </Link>
-          )}
-          <Link
-            href="/settings/whatsapp"
-            className={cn(
-              "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
-              pathname?.startsWith("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground",
-            )}
-          >
-            <Settings className="h-4 w-4" />
-            Configurações
+    <>
+      <nav className="sticky top-0 z-40 hidden border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:block">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3">
+          <Link href="/dashboard" className="flex flex-col">
+            <span className="text-sm font-semibold text-primary">{brand}</span>
+            <span className="text-xs text-muted-foreground">Central da clínica</span>
           </Link>
-          <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sair
-          </Button>
-        </div>
-
-        {/* Mobile menu button */}
-        <div className="md:hidden">
-          <MobileMenu pathname={pathname ?? ""} isMasterAdmin={isMasterAdmin} isLoggingOut={isLoggingOut} onLogout={handleLogout} />
-        </div>
-      </div>
-    </nav>
-  )
-}
-
-function MobileMenu({ pathname, isMasterAdmin, isLoggingOut, onLogout }: { pathname: string; isMasterAdmin: boolean; isLoggingOut: boolean; onLogout: () => void }) {
-  const [open, setOpen] = useState(false)
-
-  return (
-    <div className="relative">
-      <button
-        aria-label="Abrir menu"
-        aria-expanded={open}
-        className="p-2 rounded-md hover:bg-muted"
-        onClick={() => setOpen(!open)}
-      >
-        <Menu className="w-6 h-6" />
-      </button>
-
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
-          <div className="fixed inset-x-4 top-16 z-50 rounded-lg bg-card p-4 shadow-md">
-            <nav className="flex flex-col gap-2">
+          <div className="flex items-center gap-4 text-sm">
             {navItems.map((item) => {
               const Icon = item.icon
-              const active = pathname.startsWith(item.href)
+              const active = pathname?.startsWith(item.href)
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded",
-                    active ? "bg-primary/10 text-primary" : "text-muted-foreground"
+                    "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
+                    active ? "bg-primary/10 text-primary" : "text-muted-foreground",
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                   {item.label}
                 </Link>
               )
             })}
-
             {isMasterAdmin && (
-              <Link href="/admin" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded text-muted-foreground">
-                <ShieldCheck className="h-5 w-5" /> Admin
+              <Link
+                href="/admin"
+                className={cn(
+                  "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
+                  pathname?.startsWith("/admin") ? "bg-primary/10 text-primary" : "text-muted-foreground",
+                )}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Admin
               </Link>
             )}
-
-            <Link href="/settings/whatsapp" onClick={() => setOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded text-muted-foreground">
-              <Settings className="h-5 w-5" /> Configurações
+            <Link
+              href="/settings/whatsapp"
+              className={cn(
+                "flex items-center gap-1 rounded-full px-3 py-1.5 transition hover:bg-muted",
+                pathname?.startsWith("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Configurações
             </Link>
-
-            <button onClick={onLogout} className="flex items-center gap-2 px-3 py-2 rounded text-left text-muted-foreground">
-              <LogOut className="h-5 w-5" /> Sair
-            </button>
-            </nav>
+            <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4">
+              <LogOut className="mr-2 h-4 w-4" />
+              Sair
+            </Button>
           </div>
-        </>
-      )}
-    </div>
+        </div>
+      </nav>
+
+      <nav className="fixed inset-x-0 top-0 z-50 border-b bg-card/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
+          <div className="flex items-center gap-1">
+            {hasBackButton && (
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => router.back()} aria-label="Voltar">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            )}
+
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10" aria-label="Abrir menu">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[82vw] max-w-sm p-0">
+                <SheetHeader className="border-b px-4 py-4 text-left">
+                  <SheetTitle>{brand}</SheetTitle>
+                </SheetHeader>
+                <div className="flex h-full flex-col gap-2 px-3 py-3">
+                  {navItems.map((item) => {
+                    const Icon = item.icon
+                    const active = pathname?.startsWith(item.href)
+                    return (
+                      <SheetClose asChild key={item.href}>
+                        <Link
+                          href={item.href}
+                          className={cn(
+                            "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm",
+                            active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
+                          )}
+                        >
+                          <Icon className="h-5 w-5" />
+                          {item.label}
+                        </Link>
+                      </SheetClose>
+                    )
+                  })}
+
+                  {isMasterAdmin && (
+                    <SheetClose asChild>
+                      <Link
+                        href="/admin"
+                        className={cn(
+                          "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm",
+                          pathname?.startsWith("/admin") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
+                        )}
+                      >
+                        <ShieldCheck className="h-5 w-5" />
+                        Admin
+                      </Link>
+                    </SheetClose>
+                  )}
+
+                  <SheetClose asChild>
+                    <Link
+                      href="/settings/whatsapp"
+                      className={cn(
+                        "flex min-h-11 items-center gap-3 rounded-md px-3 py-2 text-sm",
+                        pathname?.startsWith("/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted",
+                      )}
+                    >
+                      <Settings className="h-5 w-5" />
+                      Configurações
+                    </Link>
+                  </SheetClose>
+
+                  <Button variant="outline" className="mt-2 min-h-11 justify-start" onClick={handleLogout} disabled={isLoggingOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <p className="truncate text-sm font-semibold text-foreground">{mobileTitle}</p>
+          <div className="w-10" aria-hidden />
+        </div>
+      </nav>
+    </>
   )
+}
+
+function getMobileTitle(pathname: string, fallback: string) {
+  if (pathname.startsWith("/dashboard")) return "Dashboard"
+  if (pathname.startsWith("/calendar")) return "Agenda"
+  if (pathname.startsWith("/patients")) return "Pacientes"
+  if (pathname.startsWith("/procedures")) return "Procedimentos"
+  if (pathname.startsWith("/professionals")) return "Profissionais"
+  if (pathname.startsWith("/equipment")) return "Equipamentos"
+  if (pathname.startsWith("/anamnesis")) return "Anamneses"
+  if (pathname.startsWith("/settings")) return "Configurações"
+  if (pathname.startsWith("/admin")) return "Admin"
+  return fallback
+}
+
+function shouldShowBack(pathname: string) {
+  const segment = pathname.split("/").filter(Boolean)
+  return segment.length >= 2
 }

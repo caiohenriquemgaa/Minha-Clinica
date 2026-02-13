@@ -23,6 +23,7 @@ import {
   Cloud,
   CloudOff,
   ArrowLeft,
+  MessageCircle,
 } from "lucide-react"
 import {
   getSessions,
@@ -152,6 +153,16 @@ export default function CalendarPage() {
   }
 
   const stats = getSessionStats(sessions)
+  const sortedDailySessions = [...dailySessions].sort(
+    (a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime(),
+  )
+
+  const getWhatsAppLink = (phone?: string | null) => {
+    if (!phone) return null
+    const sanitized = phone.replace(/\D/g, "")
+    if (!sanitized) return null
+    return `https://wa.me/${sanitized}`
+  }
 
   if (isLoading) {
     return (
@@ -183,8 +194,8 @@ export default function CalendarPage() {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
@@ -211,7 +222,7 @@ export default function CalendarPage() {
                 )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {syncSettings.enabled && (
                 <Button variant="outline" size="sm" onClick={handleManualSync} disabled={isSyncing}>
                   {isSyncing ? (
@@ -270,7 +281,7 @@ export default function CalendarPage() {
         )}
 
         {/* Stats */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="mb-8 grid gap-4 md:grid-cols-4 md:gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Sessões</CardTitle>
@@ -325,8 +336,8 @@ export default function CalendarPage() {
         {/* Calendar Navigation */}
         <Card className="mb-6">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={() => navigateDate("prev")}>
                     <ChevronLeft className="h-4 w-4" />
@@ -353,7 +364,7 @@ export default function CalendarPage() {
                   )}
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex">
                 <Button variant={view === "month" ? "default" : "outline"} size="sm" onClick={() => setView("month")}>
                   Mês
                 </Button>
@@ -389,7 +400,63 @@ export default function CalendarPage() {
                 </Link>
               </div>
             ) : (
-              <div className="rounded-md border">
+              <>
+                <div className="space-y-3 md:hidden">
+                  {sortedDailySessions.map((session) => {
+                    const whatsAppLink = getWhatsAppLink(session.patientPhone)
+                    return (
+                      <div key={session.id} className="rounded-lg border p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-base font-semibold">{session.patientName}</p>
+                            <p className="text-sm text-muted-foreground">{session.procedureName}</p>
+                          </div>
+                          <Badge
+                            variant="secondary"
+                            style={{
+                              backgroundColor: `${getStatusColor(session.status)}20`,
+                              color: getStatusColor(session.status),
+                            }}
+                          >
+                            {getStatusLabel(session.status)}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 text-sm text-muted-foreground">
+                          {new Date(session.scheduledDate).toLocaleDateString("pt-BR")} •{" "}
+                          {new Date(session.scheduledDate).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                        <div className="mt-4 grid grid-cols-3 gap-2">
+                          {whatsAppLink ? (
+                            <Button asChild variant="outline" size="icon" className="h-11 w-full" aria-label="Enviar WhatsApp">
+                              <a href={whatsAppLink} target="_blank" rel="noopener noreferrer">
+                                <MessageCircle className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <Button variant="outline" size="icon" className="h-11 w-full" disabled aria-label="WhatsApp indisponível">
+                              <MessageCircle className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button asChild variant="outline" size="icon" className="h-11 w-full" aria-label="Editar sessão">
+                            <Link href={`/calendar/${session.id}/edit`}>
+                              <Edit className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                          <Button asChild variant="outline" size="icon" className="h-11 w-full" aria-label="Ver detalhes da sessão">
+                            <Link href={`/calendar/${session.id}`}>
+                              <Eye className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className="hidden rounded-md border md:block">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -403,9 +470,7 @@ export default function CalendarPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dailySessions
-                      .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())
-                      .map((session) => (
+                    {sortedDailySessions.map((session) => (
                         <TableRow key={session.id}>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -475,7 +540,8 @@ export default function CalendarPage() {
                       ))}
                   </TableBody>
                 </Table>
-              </div>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

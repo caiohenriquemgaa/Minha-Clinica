@@ -20,6 +20,7 @@ import {
   FileText,
   CheckCircle,
   XCircle,
+  MessageCircle,
 } from "lucide-react"
 import {
   getSession,
@@ -154,14 +155,16 @@ export default function SessionDetailPage() {
 
   const sessionDate = new Date(session.scheduledDate)
   const sessionEndTime = new Date(sessionDate.getTime() + session.durationMinutes * 60000)
+  const sanitizedPhone = session.patientPhone?.replace(/\D/g, "") || ""
+  const whatsAppLink = sanitizedPhone ? `https://wa.me/${sanitizedPhone}` : null
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3 sm:gap-4">
               <Link href="/calendar">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="h-4 w-4 mr-2" />
@@ -173,15 +176,15 @@ export default function SessionDetailPage() {
                 <h1 className="text-2xl font-semibold text-foreground">Detalhes da Sessão</h1>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
               {session.status === "scheduled" && (
-                <Button variant="outline" onClick={() => handleStatusUpdate("confirmed")} disabled={isUpdating}>
+                <Button variant="outline" onClick={() => handleStatusUpdate("confirmed")} disabled={isUpdating} className="min-h-11">
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Confirmar
                 </Button>
               )}
               {session.status === "confirmed" && (
-                <Button variant="outline" onClick={() => handleStatusUpdate("completed")} disabled={isUpdating}>
+                <Button variant="outline" onClick={() => handleStatusUpdate("completed")} disabled={isUpdating} className="min-h-11">
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Concluir
                 </Button>
@@ -191,14 +194,14 @@ export default function SessionDetailPage() {
                   variant="outline"
                   onClick={() => handleStatusUpdate("cancelled")}
                   disabled={isUpdating}
-                  className="text-destructive hover:text-destructive"
+                  className="min-h-11 text-destructive hover:text-destructive"
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   Cancelar
                 </Button>
               )}
               <Link href={`/calendar/${session.id}/edit`}>
-                <Button>
+                <Button className="min-h-11 w-full">
                   <Edit className="h-4 w-4 mr-2" />
                   Editar
                 </Button>
@@ -208,15 +211,38 @@ export default function SessionDetailPage() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        <div className="grid lg:grid-cols-3 gap-8">
+      <main className="container mx-auto max-w-4xl px-3 py-4 sm:px-4 sm:py-8">
+        <div className="grid gap-6 lg:grid-cols-3 lg:gap-8">
           {/* Main Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Session Information */}
+          <div className="space-y-6 lg:col-span-2">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Informações da Sessão</CardTitle>
+                <CardTitle>Dados do cliente</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <User className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Paciente</p>
+                    <p className="font-medium">{session.patientName}</p>
+                  </div>
+                </div>
+                {session.patientPhone && (
+                  <div className="flex items-center gap-3">
+                    <MessageCircle className="h-5 w-5 text-primary" />
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Contato</p>
+                      <p className="font-medium">{session.patientPhone}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <CardTitle>Procedimento e data/hora</CardTitle>
                   <Badge
                     variant="secondary"
                     style={{
@@ -229,15 +255,7 @@ export default function SessionDetailPage() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="flex items-center gap-3">
-                    <User className="h-5 w-5 text-primary" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Paciente</p>
-                      <p className="font-medium">{session.patientName}</p>
-                    </div>
-                  </div>
-
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center gap-3">
                     <Scissors className="h-5 w-5 text-primary" />
                     <div>
@@ -247,7 +265,7 @@ export default function SessionDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center gap-3">
                     <CalendarIcon className="h-5 w-5 text-primary" />
                     <div>
@@ -282,7 +300,7 @@ export default function SessionDetailPage() {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-primary" />
                     <div>
@@ -299,18 +317,22 @@ export default function SessionDetailPage() {
                     </div>
                   </div>
                 </div>
-
-                {session.notes && (
-                  <div className="flex items-start gap-3">
-                    <FileText className="h-5 w-5 text-primary mt-1" />
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground mb-1">Observações</p>
-                      <p className="text-sm bg-muted p-3 rounded-lg">{session.notes}</p>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
+
+            {session.notes && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Observações</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-start gap-3">
+                    <FileText className="mt-1 h-5 w-5 text-primary" />
+                    <p className="rounded-lg bg-muted p-3 text-sm">{session.notes}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -321,24 +343,48 @@ export default function SessionDetailPage() {
                 <CardTitle className="text-lg">Ações Rápidas</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
+                {whatsAppLink ? (
+                  <Button asChild className="min-h-11 w-full justify-start">
+                    <a href={whatsAppLink} target="_blank" rel="noopener noreferrer">
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      WhatsApp
+                    </a>
+                  </Button>
+                ) : (
+                  <Button className="min-h-11 w-full justify-start" disabled>
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    WhatsApp indisponível
+                  </Button>
+                )}
                 <Link href={`/patients/${session.patientId}`}>
-                  <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Button className="min-h-11 w-full justify-start bg-transparent" variant="outline">
                     <User className="h-4 w-4 mr-2" />
                     Ver Paciente
                   </Button>
                 </Link>
                 <Link href={`/procedures/${session.procedureId}`}>
-                  <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Button className="min-h-11 w-full justify-start bg-transparent" variant="outline">
                     <Scissors className="h-4 w-4 mr-2" />
                     Ver Procedimento
                   </Button>
                 </Link>
                 <Link href={`/calendar/${session.id}/edit`}>
-                  <Button className="w-full justify-start bg-transparent" variant="outline">
+                  <Button className="min-h-11 w-full justify-start bg-transparent" variant="outline">
                     <Edit className="h-4 w-4 mr-2" />
-                    Editar Sessão
+                    Remarcar / Editar
                   </Button>
                 </Link>
+                {(session.status === "scheduled" || session.status === "confirmed") && (
+                  <Button
+                    variant="outline"
+                    className="min-h-11 w-full justify-start text-destructive hover:text-destructive"
+                    onClick={() => handleStatusUpdate("cancelled")}
+                    disabled={isUpdating}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancelar sessão
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
