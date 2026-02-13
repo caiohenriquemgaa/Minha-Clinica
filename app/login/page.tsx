@@ -58,7 +58,7 @@ export default function LoginPage() {
         <div className="text-center mb-8">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
             <Heart className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Minha Clínica</h1>
+            <h1 className="text-2xl font-bold text-foreground">EstetiTech</h1>
           </Link>
           <p className="text-muted-foreground">Entre na sua conta para continuar</p>
         </div>

@@ -27,7 +27,7 @@ export default function TrialExpiredPage() {
           <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
             <Button
               className="gap-2"
-              onClick={() => window.open("https://wa.me/5544997139390?text=Quero%20ativar%20Minha%20Clínica", "_blank")}
+              onClick={() => window.open("https://wa.me/5544997139390?text=Quero%20ativar%20EstetiTech", "_blank")}
             >
               <Phone className="h-4 w-4" />
               Falar no WhatsApp

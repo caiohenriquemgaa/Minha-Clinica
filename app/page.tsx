@@ -13,7 +13,7 @@ export default function HomePage() {
             <Heart className="h-8 w-8 text-primary" />
             <div>
               <p className="text-xs uppercase text-muted-foreground">Sistema de Gestão</p>
-              <h1 className="text-2xl font-bold text-foreground">Minha Clínica</h1>
+              <h1 className="text-2xl font-bold text-foreground">EstetiTech</h1>
             </div>
           </div>
           <Link href="/login">
@@ -26,7 +26,7 @@ export default function HomePage() {
       <main className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-foreground mb-4 text-balance">
-            Gerencie a <span className="text-primary">Minha Clínica</span> com eficiência
+            Gerencie a <span className="text-primary">EstetiTech</span> com eficiência
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto text-pretty">
             Sistema completo para gestão de pacientes, agendamentos, anamneses e procedimentos estéticos

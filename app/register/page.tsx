@@ -77,7 +77,7 @@ export default function RegisterPage() {
         <div className="text-center mb-8">
           <Link href="/" className="flex items-center justify-center gap-2 mb-4">
             <Heart className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">Minha Clínica</h1>
+            <h1 className="text-2xl font-bold text-foreground">EstetiTech</h1>
           </Link>
           <p className="text-muted-foreground">Crie sua conta para começar</p>
         </div>
@@ -114,7 +114,7 @@ export default function RegisterPage() {
                 <Input
                   id="clinicName"
                   type="text"
-                  placeholder="Minha Clínica"
+                  placeholder="EstetiTech"
                   value={clinicName}
                   onChange={(e) => setClinicName(e.target.value)}
                   required

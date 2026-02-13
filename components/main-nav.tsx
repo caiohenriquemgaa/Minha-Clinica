@@ -36,7 +36,7 @@ interface MainNavProps {
   brand?: string
 }
 
-export function MainNav({ hide, brand = "Minha Clínica" }: MainNavProps) {
+export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
   const pathname = usePathname()
   const router = useRouter()
   const [isLoggingOut, setIsLoggingOut] = useState(false)

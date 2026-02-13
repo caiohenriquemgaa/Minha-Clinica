@@ -9,7 +9,7 @@ import { MainNav } from "@/components/main-nav"
 import { getServerSession } from "@/lib/auth-server"
 
 export const metadata: Metadata = {
-  title: "Minha Clínica - Sistema de Gestão",
+  title: "EstetiTech - Sistema de Gestão",
   description: "Sistema completo de gestão para a sua clínica",
   generator: "v0.app",
 }
@@ -26,7 +26,7 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable} bg-background`}>
-        <MainNav hide={!hasSession} brand="Minha Clínica" />
+        <MainNav hide={!hasSession} brand="EstetiTech" />
         <main className={`min-h-screen ${hasSession ? "pt-20" : ""}`}>
           <Suspense fallback={null}>{children}</Suspense>
         </main>
