@@ -96,6 +96,17 @@ export async function DELETE(_: Request, { params }: RouteParams) {
   }
 
   const admin = createSupabaseAdminClient()
+  // Evita violação de FK (profiles.default_organization_id -> organizations.id)
+  // antes de remover a organização.
+  const { error: profileUpdateError } = await admin
+    .from("profiles")
+    .update({ default_organization_id: null })
+    .eq("default_organization_id", params.id)
+
+  if (profileUpdateError) {
+    return NextResponse.json({ error: profileUpdateError.message }, { status: 400 })
+  }
+
   const { error: deleteError } = await admin.from("organizations").delete().eq("id", params.id)
 
   if (deleteError) {
