@@ -86,6 +86,53 @@ async function uploadImageToSupabase(file: File, suffix: string) {
   return publicUrl
 }
 
+function parseMissingColumn(message: string) {
+  const match = message.match(/Could not find the '([^']+)' column/)
+  return match?.[1] ?? null
+}
+
+async function insertPatientWithSchemaFallback(supabase: ReturnType<typeof getSupabaseBrowserClient>, payload: Record<string, any>) {
+  const safePayload = { ...payload }
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data, error } = await supabase.from("patients").insert([safePayload]).select().single()
+    if (!error) return data
+
+    const missingColumn = parseMissingColumn(error.message)
+    if (missingColumn && missingColumn in safePayload) {
+      delete safePayload[missingColumn]
+      continue
+    }
+
+    throw error
+  }
+
+  throw new Error("Não foi possível criar paciente: schema incompatível com os campos enviados.")
+}
+
+async function updatePatientWithSchemaFallback(
+  supabase: ReturnType<typeof getSupabaseBrowserClient>,
+  id: string,
+  payload: Record<string, any>,
+) {
+  const safePayload = { ...payload }
+
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const { data, error } = await supabase.from("patients").update(safePayload).eq("id", id).select().single()
+    if (!error) return data
+
+    const missingColumn = parseMissingColumn(error.message)
+    if (missingColumn && missingColumn in safePayload) {
+      delete safePayload[missingColumn]
+      continue
+    }
+
+    throw error
+  }
+
+  throw new Error("Não foi possível atualizar paciente: schema incompatível com os campos enviados.")
+}
+
 function normalizePatientPayload(formData: PatientFormData) {
   return {
     name: formData.name.trim(),
@@ -155,9 +202,11 @@ export async function createPatient(formData: PatientFormData): Promise<Patient>
     if (formData.beforeImage) payload.before_image = await uploadImageToSupabase(formData.beforeImage, "before")
     if (formData.afterImage) payload.after_image = await uploadImageToSupabase(formData.afterImage, "after")
 
-    const { data, error } = await supabase.from("patients").insert([payload]).select().single()
-    if (error) throw new Error(`Erro ao criar paciente: ${error.message}`)
-    return data
+    try {
+      return await insertPatientWithSchemaFallback(supabase, payload)
+    } catch (error: any) {
+      throw new Error(`Erro ao criar paciente: ${error?.message ?? "falha desconhecida"}`)
+    }
   }
 
   const now = new Date().toISOString()
@@ -202,9 +251,11 @@ export async function updatePatient(id: string, formData: Partial<PatientFormDat
     if (formData.beforeImage) payload.before_image = await uploadImageToSupabase(formData.beforeImage, "before")
     if (formData.afterImage) payload.after_image = await uploadImageToSupabase(formData.afterImage, "after")
 
-    const { data, error } = await supabase.from("patients").update(payload).eq("id", id).select().single()
-    if (error) throw new Error(`Erro ao atualizar paciente: ${error.message}`)
-    return data
+    try {
+      return await updatePatientWithSchemaFallback(supabase, id, payload)
+    } catch (error: any) {
+      throw new Error(`Erro ao atualizar paciente: ${error?.message ?? "falha desconhecida"}`)
+    }
   }
 
   const patients = loadLocalPatients()
