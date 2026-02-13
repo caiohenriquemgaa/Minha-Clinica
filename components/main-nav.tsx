@@ -56,18 +56,14 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
           setIsMasterAdmin(Boolean(data?.isMaster))
         }
       } catch {
-        // Ignore network errors to avoid breaking menu rendering.
+        // Ignora erro de rede para não quebrar menu.
       }
     }
 
-    if (!shouldHide) {
-      checkMaster()
-    }
+    if (!shouldHide) checkMaster()
   }, [shouldHide])
 
-  if (shouldHide) {
-    return null
-  }
+  if (shouldHide) return null
 
   const mobileTitle = getMobileTitle(pathname ?? "", brand)
   const hasBackButton = shouldShowBack(pathname ?? "")
@@ -75,13 +71,12 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true)
     await signOut()
-    // Hard redirect after sign out so server/middleware state is fresh.
     window.location.assign("/login")
   }
 
   return (
     <>
-      <nav className="sticky top-0 z-40 hidden border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:block">
+      <nav className="sticky top-0 z-40 hidden border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 lg:block">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
           <Link href="/dashboard" className="flex flex-col">
             <span className="text-sm font-semibold text-primary">{brand}</span>
@@ -127,7 +122,7 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
               <Settings className="h-4 w-4" />
               Configurações
             </Link>
-            <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4">
+            <Button variant="outline" size="sm" onClick={handleLogout} disabled={isLoggingOut} className="ml-4 min-h-10">
               <LogOut className="mr-2 h-4 w-4" />
               Sair
             </Button>
@@ -135,8 +130,8 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
         </div>
       </nav>
 
-      <nav className="fixed inset-x-0 top-0 z-50 border-b bg-card/95 px-3 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/80 md:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
+      <nav className="fixed inset-x-0 top-0 z-50 px-3 py-2 lg:hidden">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 rounded-xl border bg-card/90 px-2 py-2 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/80">
           <div className="flex items-center gap-1">
             {hasBackButton && (
               <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => router.back()} aria-label="Voltar">
@@ -150,7 +145,7 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[82vw] max-w-sm p-0">
+              <SheetContent side="left" className="w-[84vw] max-w-sm p-0">
                 <SheetHeader className="border-b px-4 py-4 text-left">
                   <SheetTitle>{brand}</SheetTitle>
                 </SheetHeader>
@@ -202,7 +197,15 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
                     </Link>
                   </SheetClose>
 
-                  <Button variant="outline" className="mt-2 min-h-11 justify-start" onClick={handleLogout} disabled={isLoggingOut}>
+                  <Button
+                    variant="outline"
+                    className="mt-2 min-h-11 justify-start"
+                    onClick={async () => {
+                      setMobileOpen(false)
+                      await handleLogout()
+                    }}
+                    disabled={isLoggingOut}
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     Sair
                   </Button>
@@ -211,7 +214,7 @@ export function MainNav({ hide, brand = "EstetiTech" }: MainNavProps) {
             </Sheet>
           </div>
 
-          <p className="truncate text-sm font-semibold text-foreground">{mobileTitle}</p>
+          <p className="truncate px-2 text-sm font-semibold text-foreground">{mobileTitle}</p>
           <div className="w-10" aria-hidden />
         </div>
       </nav>
