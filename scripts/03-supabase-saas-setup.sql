@@ -41,7 +41,7 @@ create table if not exists public.organizations (
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text,
-  default_organization_id uuid references public.organizations(id),
+  default_organization_id uuid references public.organizations(id) on delete set null,
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now()
 );
