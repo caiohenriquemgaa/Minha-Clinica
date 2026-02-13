@@ -37,7 +37,7 @@ export async function getGoogleCalendars(): Promise<Array<{ id: string; name: st
   // Mock calendars - replace with actual Google Calendar API call
   return [
     { id: "primary", name: "Calendário Principal" },
-    { id: "jm-estetica", name: "JM Estética - Agendamentos" },
+    { id: "estetitech", name: "EstetiTech - Agendamentos" },
   ]
 }
 

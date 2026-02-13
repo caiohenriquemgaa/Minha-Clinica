@@ -19,11 +19,12 @@ export interface ReminderLog {
   messagePreview: string
 }
 
-const STORAGE_KEY = "jmestetica-reminders"
+const STORAGE_KEY = "estetitech-reminders"
+const LEGACY_STORAGE_KEYS = ["jmestetica-reminders"]
 export const defaultReminderSettings: ReminderSettings = {
   enabled: true,
   hoursBefore: 24,
-  senderName: "Equipe JM Estética",
+  senderName: "Equipe EstetiTech",
   channel: "whatsapp",
 }
 
@@ -31,7 +32,17 @@ export function loadReminderLogs(): ReminderLog[] {
   if (typeof window === "undefined") return []
   try {
     const stored = window.localStorage.getItem(STORAGE_KEY)
-    return stored ? (JSON.parse(stored) as ReminderLog[]) : []
+    if (stored) return JSON.parse(stored) as ReminderLog[]
+
+    for (const legacyKey of LEGACY_STORAGE_KEYS) {
+      const legacyStored = window.localStorage.getItem(legacyKey)
+      if (!legacyStored) continue
+      const parsed = JSON.parse(legacyStored) as ReminderLog[]
+      window.localStorage.setItem(STORAGE_KEY, legacyStored)
+      return parsed
+    }
+
+    return []
   } catch (error) {
     console.warn("Não foi possível carregar o histórico de lembretes:", error)
     return []

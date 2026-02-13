@@ -156,7 +156,7 @@ export default function HomePage() {
             <CardContent className="pt-6">
               <h3 className="text-2xl font-semibold text-foreground mb-4">Pronto para modernizar sua clínica?</h3>
               <p className="text-muted-foreground mb-6">
-                Comece a usar o sistema JM Estética e Saúde hoje mesmo e transforme a gestão da sua clínica.
+                Comece a usar o sistema EstetiTech hoje mesmo e transforme a gestão da sua clínica.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/login">
@@ -179,7 +179,7 @@ export default function HomePage() {
       <footer className="border-t bg-card mt-16">
         <div className="container mx-auto px-4 py-8">
           <div className="text-center text-sm text-muted-foreground">
-            <p>&copy; 2024 JM Estética e Saúde. Todos os direitos reservados.</p>
+            <p>&copy; 2026 EstetiTech. Todos os direitos reservados.</p>
           </div>
         </div>
       </footer>

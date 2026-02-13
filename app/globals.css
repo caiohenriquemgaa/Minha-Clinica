@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Updated color tokens for JM Estética e Saúde medical aesthetic */
+  /* Updated color tokens for EstetiTech */
   --background: oklch(0.98 0.02 142); /* Light green background #f0fdf4 */
   --foreground: oklch(0.27 0.01 258); /* Dark gray text #374151 */
   --card: oklch(1 0 0); /* Pure white cards */
